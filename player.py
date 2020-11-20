@@ -20,7 +20,7 @@
 import math
 
 from projectile import Projectile
-from vectors import Vec2d
+from space.vectors import Vec2d
 
 MAX_VELOCITY_ANGLE = 5
 MAX_VELOCITY_STEP = 1

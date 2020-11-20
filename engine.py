@@ -21,10 +21,10 @@ import math
 import time
 import tkinter
 
-import bsp
+from space import bsp
 from player import Player
 from renderer import render_polygon, RenderType, calculate_x_y_line_for_x
-from vectors import Vec2d
+from space.vectors import Vec2d
 
 WINDOW_WIDTH, WINDOW_HEIGHT = 1280, 650
 ENGINE_PIXEL_SIZE = 5
