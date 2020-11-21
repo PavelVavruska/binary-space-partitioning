@@ -16,6 +16,8 @@
 #  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #  SOFTWARE.
+import math
+
 from space.vectors import Vec2d
 
 
@@ -29,10 +31,13 @@ class Line:
     """
 
     def __init__(self, first, second, normal):
-        self.first = first  # type: Vec2d
-        self.second = second  # type: Vec2d
+        self.first = Vec2d(first.x, first.y)  # type: Vec2d
+        self.second = Vec2d(second.x, second.y)  # type: Vec2d
         self.normal = normal  # type: Vec2d
         self.formula_m, self.formula_b = self.get_line_formula()
+
+    def compute_length(self):
+        return math.sqrt(math.pow(self.first.x - self.second.x, 2) + math.pow(self.first.y - self.second.y, 2))
 
     def is_point_under(self, point):
         point_x = point.x
@@ -54,11 +59,26 @@ class Line:
             m = delta_y / delta_x
         else:
             m = 0
-        #y = m*x + b
-        b = y1 - m*x1  # calculate b from one point
+        # y = m*x + b
+        b = y1 - m * x1  # calculate b from one point
         return m, b
 
+    def scale_first_end(self, scale):
+        x1 = self.first.x
+        y1 = self.first.y
+        x2 = self.second.x
+        y2 = self.second.y
+        delta_x = x1 - x2
+        delta_y = y1 - y2
+        self.first.x = x2 + delta_x * scale
+        self.first.y = y2 + delta_y * scale
 
-
-
-
+    def scale_second_end(self, scale):
+        x1 = self.first.x
+        y1 = self.first.y
+        x2 = self.second.x
+        y2 = self.second.y
+        delta_x = x1 - x2
+        delta_y = y1 - y2
+        self.second.x = x1 + delta_x * scale
+        self.second.y = y1 + delta_y * scale

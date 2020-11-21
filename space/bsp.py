@@ -35,7 +35,7 @@ def get_tree():
     point_1_b = Vec2d(200, 10)
     point_1_c = Vec2d(200, 100)
     point_1_d_portal = Vec2d(150, 200)  # P !!!
-    point_1_e_portal = Vec2d(100, 250)  # P !!!
+    point_1_e_portal = Vec2d(100, 220)  # P !!!
     point_1_f = Vec2d(10, 200)
 
     point_2_a = Vec2d(300, 300)
@@ -67,37 +67,3 @@ def get_tree():
     subsector_2 = Subsector([line_2_a, line_1_d, line_2_c, line_2_d, line_2_e, line_2_f, line_2_g])
     node = Node(line_1_d, subsector_1, subsector_2)
     return node
-
-
-def travers_binary_tree(p1, z_buffer, line_list):
-    """
-    Not used yet.
-    TODO: Hardcoded POC
-    """
-    y = p1.line.height
-    x_start = p1.line.first.x
-    x_end = p1.line.second.x
-    y_start = p1.line.first.y
-    y_end = p1.line.second.y
-    # make sure the line is drawable
-    if x_start > x_end:
-        x_start, x_end = x_end, x_start
-        y_start, y_end = y_end, y_start
-
-    # travers closer first
-    if p1.left:
-        travers_binary_tree(p1.left, z_buffer, line_list)
-    # travers farther later
-    if p1.right:
-        travers_binary_tree(p1.right, z_buffer, line_list)
-
-    for x in range(x_start, x_end):
-        y_cor = y_start + (y_end - y_start) / (x_end - x_start) * x
-        distance_from_camera = math.sqrt(math.pow(x - cam_x, 2) + math.pow(y_cor - cam_y, 2))
-        if x not in z_buffer:
-            z_buffer[x] = [distance_from_camera]
-        else:
-            z_buffer[x].append(distance_from_camera)
-        line_list.append((p1.line.first, p1.line.second))
-
-    return z_buffer, line_list

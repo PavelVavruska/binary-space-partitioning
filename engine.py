@@ -24,6 +24,8 @@ import tkinter
 from space import bsp
 from player import Player
 from renderer import render_polygon, RenderType, calculate_x_y_line_for_x
+from space.line import Line
+from space.subsector import Subsector
 from space.vectors import Vec2d
 
 WINDOW_WIDTH, WINDOW_HEIGHT = 1280, 650
@@ -126,50 +128,50 @@ time_render_end = time.time()
 tree = bsp.get_tree()
 
 
-def render_sector(subsector, portal_line, portal=None):
-    for line in subsector.get_line_iterator():  # type: line.Line
-        diff_1_x = line.first.x - player.x
-        diff_2_x = line.second.x - player.x
-        diff_1_y = line.first.y - player.y
-        diff_2_y = line.second.y - player.y
-        if line == portal_line:
+def render_sector(subsector: Subsector, portal_line: Line, abs_portal: Line = None) -> None:
+    for abs_line in subsector.get_line_iterator():  # type: abs_line.Line
+        abs_diff_1_x = abs_line.first.x - player.x
+        abs_diff_2_x = abs_line.second.x - player.x
+        abs_diff_1_y = abs_line.first.y - player.y
+        abs_diff_2_y = abs_line.second.y - player.y
+        if abs_line == portal_line:
             fill_color = "#FF0000"
         else:
             fill_color = "#FFFFFF"
-        canvas_abs.create_line(line.first.x, line.first.y, line.second.x,
-                               line.second.y, fill=fill_color)
+        canvas_abs.create_line(abs_line.first.x, abs_line.first.y, abs_line.second.x,
+                               abs_line.second.y, fill=fill_color)
 
     # minimap absolute map
-    canvas_abs.create_oval(player_pixel_x,
-                           player_pixel_y,
-                           player_pixel_x + 10,
-                           player_pixel_y + 10, fill="#999999")
+    canvas_abs.create_oval(abs_player_x,
+                           abs_player_y,
+                           abs_player_x + 10,
+                           abs_player_y + 10, fill="#999999")
 
-    canvas_abs.create_line(player_pixel_x + 5,
-                           player_pixel_y + 5,
-                           player_pixel_x + 5 + player_aiming_vec2d.x * 10,
-                           player_pixel_y + 5 + player_aiming_vec2d.y * 10, fill="#FFFFFF")
+    canvas_abs.create_line(abs_player_x + 5,
+                           abs_player_y + 5,
+                           abs_player_x + 5 + player_aiming_vec2d.x * 10,
+                           abs_player_y + 5 + player_aiming_vec2d.y * 10, fill="#FFFFFF")
 
-    canvas_abs.create_line(player_pixel_x + 5,
-                           player_pixel_y + 5,
-                           player_pixel_x + 5 + vec2d_forward.x * 50,
-                           player_pixel_y + 5 + vec2d_forward.y * 50, fill="#00FF00")
+    canvas_abs.create_line(abs_player_x + 5,
+                           abs_player_y + 5,
+                           abs_player_x + 5 + vec2d_forward.x * 50,
+                           abs_player_y + 5 + vec2d_forward.y * 50, fill="#00FF00")
 
-    canvas_abs.create_line(player_pixel_x + 5,
-                           player_pixel_y + 5,
-                           player_pixel_x + 5 + vec2d_sideways.x * 50,
-                           player_pixel_y + 5 + vec2d_sideways.y * 50, fill="#FF0000")
+    canvas_abs.create_line(abs_player_x + 5,
+                           abs_player_y + 5,
+                           abs_player_x + 5 + vec2d_sideways.x * 50,
+                           abs_player_y + 5 + vec2d_sideways.y * 50, fill="#FF0000")
 
-    canvas_abs.create_line(player_pixel_x + 5,
-                           player_pixel_y + 5,
-                           player_pixel_x + 5 + vec2d_combined.x * 50,
-                           player_pixel_y + 5 + vec2d_combined.y * 50, fill="#FF00FF")
+    canvas_abs.create_line(abs_player_x + 5,
+                           abs_player_y + 5,
+                           abs_player_x + 5 + vec2d_combined.x * 50,
+                           abs_player_y + 5 + vec2d_combined.y * 50, fill="#FF00FF")
 
     # draw frustrum
-    canvas_abs.create_line(player_pixel_x + 5,
-                           player_pixel_y + 5,
-                           player_pixel_x + 5 + player_aiming_vec2d.x * 10,
-                           player_pixel_y + 5 + player_aiming_vec2d.y * 10, fill="#FFFFFF")
+    canvas_abs.create_line(abs_player_x + 5,
+                           abs_player_y + 5,
+                           abs_player_x + 5 + player_aiming_vec2d.x * 10,
+                           abs_player_y + 5 + player_aiming_vec2d.y * 10, fill="#FFFFFF")
 
     for projectile in player.projectiles:  # type: projectile
         if projectile.position_vec2d.x < 0 or projectile.position_vec2d.x > 640 or \
@@ -210,143 +212,137 @@ def render_sector(subsector, portal_line, portal=None):
     player_angle = player.angle
     portal_last_points_buffer = []
 
-    for i, line in enumerate(subsector.get_line_iterator()):  # type: line.Line
+    for i, abs_line in enumerate(subsector.get_line_iterator()):  # type: Line
 
         # transform vertexes relative to the player
-        diff_1_x = line.first.x - player.x
-        diff_2_x = line.second.x - player.x
-        diff_1_y = line.first.y - player.y
-        diff_2_y = line.second.y - player.y
+        abs_diff_1_x = abs_line.first.x - player.x
+        abs_diff_2_x = abs_line.second.x - player.x
+        abs_diff_1_y = abs_line.first.y - player.y
+        abs_diff_2_y = abs_line.second.y - player.y
 
         # rotate around the player
-        diff_rot_1_x = diff_1_x * math.cos(math.radians(player_angle)) + diff_1_y * math.sin(math.radians(player_angle))
-        diff_rot_1_y = - diff_1_x * math.sin(math.radians(player_angle)) + diff_1_y * math.cos(
+        trans_diff_rot_1_x = abs_diff_1_x * math.cos(math.radians(player_angle)) + abs_diff_1_y * math.sin(
+            math.radians(player_angle))
+        trans_diff_rot_1_y = - abs_diff_1_x * math.sin(math.radians(player_angle)) + abs_diff_1_y * math.cos(
             math.radians(player_angle))
 
-        diff_rot_2_x = diff_2_x * math.cos(math.radians(player_angle)) + diff_2_y * math.sin(
+        trans_diff_rot_2_x = abs_diff_2_x * math.cos(math.radians(player_angle)) + abs_diff_2_y * math.sin(
             math.radians(player_angle))
-        diff_rot_2_y = - diff_2_x * math.sin(math.radians(player_angle)) + diff_2_y * math.cos(
+        trans_diff_rot_2_y = - abs_diff_2_x * math.sin(math.radians(player_angle)) + abs_diff_2_y * math.cos(
             math.radians(player_angle))
 
         # line clipping behind camera
-        if not portal:
-            if (diff_rot_1_x <= 0.1 and diff_rot_2_x <= 0.1):  # trivial reject
-                continue
-            elif (diff_rot_1_x <= 0.1):  # 1 x is behind player, calculate
-                diff_rot_1_x, diff_rot_1_y = calculate_x_y_line_for_x(diff_rot_2_y, diff_rot_1_y, diff_rot_2_x,
-                                                                      diff_rot_1_x, 2)
+        # if not portal:
+        if (trans_diff_rot_1_x <= 0.1 and trans_diff_rot_2_x <= 0.1):  # trivial reject
+            continue
+        elif (trans_diff_rot_1_x <= 0.1):  # 1 x is behind player, calculate
+            trans_diff_rot_1_x, trans_diff_rot_1_y = calculate_x_y_line_for_x(trans_diff_rot_2_y, trans_diff_rot_1_y,
+                                                                              trans_diff_rot_2_x,
+                                                                              trans_diff_rot_1_x, 2)
 
-            elif (diff_rot_2_x <= 0.1):  # 2 x is behind player, calculate
-                diff_rot_2_x, diff_rot_2_y = calculate_x_y_line_for_x(diff_rot_2_y, diff_rot_1_y, diff_rot_2_x,
-                                                                      diff_rot_1_x, 2)
+        elif (trans_diff_rot_2_x <= 0.1):  # 2 x is behind player, calculate
+            trans_diff_rot_2_x, trans_diff_rot_2_y = calculate_x_y_line_for_x(trans_diff_rot_2_y, trans_diff_rot_1_y,
+                                                                              trans_diff_rot_2_x,
+                                                                              trans_diff_rot_1_x, 2)
 
-        diff_rot_center_1_x = diff_rot_1_x + WINDOW_WIDTH / 6
-        diff_rot_center_1_y = diff_rot_1_y + WINDOW_HEIGHT / 2
-        diff_rot_center_2_x = diff_rot_2_x + WINDOW_WIDTH / 6
-        diff_rot_center_2_y = diff_rot_2_y + WINDOW_HEIGHT / 2
+        trans_diff_rot_center_1_x = trans_diff_rot_1_x + WINDOW_WIDTH / 6
+        trans_diff_rot_center_1_y = trans_diff_rot_1_y + WINDOW_HEIGHT / 2
+        trans_diff_rot_center_2_x = trans_diff_rot_2_x + WINDOW_WIDTH / 6
+        trans_diff_rot_center_2_y = trans_diff_rot_2_y + WINDOW_HEIGHT / 2
 
-        canvas_trans.create_line(diff_rot_center_1_x, diff_rot_center_1_y, diff_rot_center_2_x, diff_rot_center_2_y,
-                                 fill=fill_color)
+        canvas_trans.create_line(trans_diff_rot_center_1_x, trans_diff_rot_center_1_y, trans_diff_rot_center_2_x,
+                                 trans_diff_rot_center_2_y, fill=fill_color)
 
         # find angle to point 1
-        p1_angle_rad = math.atan2(diff_rot_1_y, diff_rot_1_x)
+        p1_angle_rad = math.atan2(trans_diff_rot_1_y, trans_diff_rot_1_x)
         # find angle to point 2
-        p2_angle_rad = math.atan2(diff_rot_2_y, diff_rot_2_x)
-
-        # calculate distance from player angle and triangle hypotenuse
-
-        line_point_distance_1 = math.sqrt(diff_rot_1_x * diff_rot_1_x + diff_rot_1_y * diff_rot_1_y)
-        line_point_distance_2 = math.sqrt(diff_rot_2_x * diff_rot_2_x + diff_rot_2_y * diff_rot_2_y)
-        # if line_point_distance_1 > 0:
-        line_point_distance_1 = math.cos(p1_angle_rad) * line_point_distance_1
-        # if line_point_distance_2 > 0:
-        line_point_distance_2 = math.cos(p2_angle_rad) * line_point_distance_2
-
-        if line_point_distance_1 > 0:
-            diff_rot_3d_1_x = diff_rot_1_y * 128 / line_point_distance_1 + WINDOW_WIDTH / 6
-            line_point_distance_1 = 100 / (line_point_distance_1 / 50)
-            diff_rot_3d_1_y = diff_rot_1_y
-        else:
-            diff_rot_3d_1_x = 10
-            diff_rot_3d_1_y = 10
-
-        if line_point_distance_2 > 0:
-            diff_rot_3d_2_x = diff_rot_2_y * 128 / line_point_distance_2 + WINDOW_WIDTH / 6
-            line_point_distance_2 = 100 / (line_point_distance_2 / 50)
-            diff_rot_3d_2_y = diff_rot_2_y
-        else:
-            diff_rot_3d_2_x = 10
-            diff_rot_3d_2_y = 10
-
-        looking_dot = Vec2d.dot_product_between(line.normal, player_aiming_vec2d)
+        p2_angle_rad = math.atan2(trans_diff_rot_2_y, trans_diff_rot_2_x)
 
         outline_color = "#FFFF00"
 
         # handling of narrow portal and its edges
         # interpolation of lines
         is_one_point_visible = False
-        if portal:
-            if portal[0] < diff_rot_3d_1_x < portal[1]:
-                is_one_point_visible = True
-                if diff_rot_3d_2_x < portal[0]:
-                    diff_rot_3d_2_x, diff_rot_3d_2_y = calculate_x_y_line_for_x(diff_rot_2_y, diff_rot_1_y,
-                                                                                diff_rot_2_x,
-                                                                                diff_rot_1_x, portal[0])
-                elif diff_rot_3d_2_x > portal[1]:
-                    diff_rot_3d_2_x, diff_rot_3d_2_y = calculate_x_y_line_for_x(diff_rot_2_y, diff_rot_1_y,
-                                                                                diff_rot_2_x,
-                                                                                diff_rot_1_x, portal[1])
-                    # change y towards portal1
-            elif portal[0] < diff_rot_3d_2_x < portal[1]:
-                is_one_point_visible = True
-                if diff_rot_3d_1_x < portal[0]:
-                    diff_rot_3d_1_x, diff_rot_3d_1_y = calculate_x_y_line_for_x(diff_rot_2_y, diff_rot_1_y,
-                                                                                diff_rot_2_x,
-                                                                                diff_rot_1_x, portal[0])
-                    # change y towards portal0
-                elif diff_rot_3d_1_x > portal[1]:
-                    diff_rot_3d_1_x, diff_rot_3d_1_y = calculate_x_y_line_for_x(diff_rot_2_y, diff_rot_1_y,
-                                                                                diff_rot_2_x,
-                                                                                diff_rot_1_x, portal[1])
-                    # change y towards portal1
-            elif diff_rot_3d_1_x < portal[0] < portal[1] < diff_rot_3d_2_x:
-                is_one_point_visible = True
-                # both points are outof portal
-                diff_rot_3d_1_x, diff_rot_3d_1_y = calculate_x_y_line_for_x(diff_rot_2_y, diff_rot_1_y,
-                                                                            diff_rot_2_x,
-                                                                            diff_rot_1_x, portal[0])
-                diff_rot_3d_2_x, diff_rot_3d_2_y = calculate_x_y_line_for_x(diff_rot_2_y, diff_rot_1_y,
-                                                                            diff_rot_2_x,
-                                                                            diff_rot_1_x, portal[1])
-            elif diff_rot_3d_2_x < portal[0] < portal[1] < diff_rot_3d_1_x:
-                is_one_point_visible = True
-                # both points are out of portal
-                diff_rot_3d_2_x, diff_rot_3d_2_y = calculate_x_y_line_for_x(diff_rot_2_y, diff_rot_1_y,
-                                                                            diff_rot_2_x,
-                                                                            diff_rot_1_x, portal[0])
-                diff_rot_3d_1_x, diff_rot_3d_1_y = calculate_x_y_line_for_x(diff_rot_2_y, diff_rot_1_y,
-                                                                            diff_rot_2_x,
-                                                                            diff_rot_1_x, portal[1])
 
+        # calculate distance from player angle and triangle hypotenuse
+
+        trans_line_point_dist_1 = math.sqrt(
+            trans_diff_rot_1_x * trans_diff_rot_1_x + trans_diff_rot_1_y * trans_diff_rot_1_y)
+        trans_line_point_dist_2 = math.sqrt(
+            trans_diff_rot_2_x * trans_diff_rot_2_x + trans_diff_rot_2_y * trans_diff_rot_2_y)
+        # if line_point_distance_1 > 0:
+        trans_line_point_dist_1 = math.cos(p1_angle_rad) * trans_line_point_dist_1
+        # if line_point_distance_2 > 0:
+        trans_line_point_dist_2 = math.cos(p2_angle_rad) * trans_line_point_dist_2
+
+        if trans_line_point_dist_1 > 0:
+            trans3d_diff_rot_1_x = trans_diff_rot_1_y * 128 / trans_line_point_dist_1 + WINDOW_WIDTH / 6
+            trans_line_point_dist_1 = 100 / (trans_line_point_dist_1 / 50)
+            trans3d_diff_rot_1_y = trans_diff_rot_1_y
+        else:
+            trans3d_diff_rot_1_x = 10
+            trans3d_diff_rot_1_y = 10
+
+        if trans_line_point_dist_2 > 0:
+            trans3d_diff_rot_2_x = trans_diff_rot_2_y * 128 / trans_line_point_dist_2 + WINDOW_WIDTH / 6
+            trans_line_point_dist_2 = 100 / (trans_line_point_dist_2 / 50)
+            trans3d_diff_rot_2_y = trans_diff_rot_2_y
+        else:
+            trans3d_diff_rot_2_x = 10
+            trans3d_diff_rot_2_y = 10
+
+        if abs_portal:
+            player_vec2d = Vec2d(abs_player_x, abs_player_y)
+            # helping lines for portal
+            abs_portal_line_1 = Line(abs_portal.first, player_vec2d, None)
+            abs_portal_line_1.scale_first_end(4)
+            abs_portal_line_2 = Line(abs_portal.second, player_vec2d, None)
+            abs_portal_line_2.scale_first_end(4)
+            canvas_abs.create_line(abs_portal_line_1.first.x, abs_portal_line_1.first.y, abs_player_x, abs_player_y,
+                                   fill="#990000")
+            canvas_abs.create_line(abs_portal_line_2.first.x, abs_portal_line_2.first.y, abs_player_x, abs_player_y,
+                                   fill="#000099")
+
+            # filter visible lines by portal lines
+            angle_portal_1 = math.atan2(abs_portal.first.y - abs_player_y, abs_portal.first.x - abs_player_x)
+            angle_portal_2 = math.atan2(abs_portal.second.y - abs_player_y, abs_portal.second.x - abs_player_x)
+
+            angle_line_1 = math.atan2(abs_line.first.y - abs_player_y, abs_line.first.x - abs_player_x)
+            angle_line_2 = math.atan2(abs_line.second.y - abs_player_y, abs_line.second.x - abs_player_x)
+
+            if abs_portal.is_point_under(player_vec2d):
+                if (angle_portal_1 < angle_line_1 < angle_portal_2) or (
+                        angle_portal_1 < angle_line_2 < angle_portal_2) or (
+                        angle_line_2 < angle_portal_1 and angle_portal_2 < angle_line_1):
+                    is_one_point_visible = True
+                    canvas_abs.create_line(abs_line.first.x, abs_line.first.y, abs_line.second.x, abs_line.second.y,
+                                           fill="#00FF00", dash=(3, 3, 3, 3), width=3)
+            else:
+                if (angle_portal_2 < angle_line_1 < angle_portal_1) or (
+                        angle_portal_2 < angle_line_2 < angle_portal_1) or (
+                        angle_line_1 < angle_portal_2 and angle_portal_1 < angle_line_2):
+                    is_one_point_visible = True
+                    canvas_abs.create_line(abs_line.first.x, abs_line.first.y, abs_line.second.x, abs_line.second.y,
+                                           fill="#00FFFF", dash=(3, 3, 3, 3), width=3)
         points = [
-            diff_rot_3d_1_x,
-            300 + line_point_distance_1,
-            diff_rot_3d_1_x,
-            300 - line_point_distance_1,
-            diff_rot_3d_2_x,
-            300 - line_point_distance_2,
-            diff_rot_3d_2_x,
-            300 + line_point_distance_2,
+            trans3d_diff_rot_1_x,
+            300 + trans_line_point_dist_1,
+            trans3d_diff_rot_1_x,
+            300 - trans_line_point_dist_1,
+            trans3d_diff_rot_2_x,
+            300 - trans_line_point_dist_2,
+            trans3d_diff_rot_2_x,
+            300 + trans_line_point_dist_2,
         ]
 
         portal_rendered = False
-        if not portal:
-            if line == portal_line:
+        if not abs_portal:
+            if abs_line == portal_line:
                 portal_rendered = True
                 render_sector(tree.get_neighbours(player), portal_line,
-                              portal=sorted([diff_rot_3d_1_x, diff_rot_3d_2_x]))
+                              abs_portal=abs_line)
 
-        if (not portal or is_one_point_visible) and not portal_rendered:
+        if (not abs_portal or is_one_point_visible) and not portal_rendered:
             fill_color = "#FFFFFF"
             render_polygon(render_type=RenderType.POLY,
                            canvas=canvas_3d,
@@ -384,8 +380,8 @@ while isAlive:
     canvas_3d.delete("all")
     canvas_3d_2.delete("all")
 
-    player_pixel_x = player.x  # * PIXEL_SIZE
-    player_pixel_y = player.y  # * PIXEL_SIZE
+    abs_player_x = player.x  # * PIXEL_SIZE
+    abs_player_y = player.y  # * PIXEL_SIZE
 
     # BSP
 
