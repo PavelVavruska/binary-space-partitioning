@@ -23,10 +23,9 @@ from space.vectors import Vec2d
 class Node:
 
     def __init__(self, line, left, right):
-
+        self.line = line
         self.left = left
         self.right = right
-        self.line = line
 
     def travers(self, player):
         is_under = self.line.is_point_under(Vec2d(player.x, player.y))
